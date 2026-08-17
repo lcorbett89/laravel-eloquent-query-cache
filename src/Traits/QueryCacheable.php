@@ -30,9 +30,15 @@ trait QueryCacheable
     {
         /** @var \Illuminate\Database\Eloquent\Model $this */
         if (isset(static::$flushCacheOnUpdate) && static::$flushCacheOnUpdate) {
-            static::observe(
-                static::getFlushQueryCacheObserver()
-            );
+            $observer = static::getFlushQueryCacheObserver();
+
+            // Model::observe() instantiates the model via `new static`, which
+            // Laravel 13 forbids while the model is still booting. Registering
+            // the observer's handlers directly avoids that instantiation and
+            // behaves identically on Laravel 10, 11 and 12.
+            foreach (get_class_methods($observer) as $event) {
+                static::registerModelEvent($event, $observer.'@'.$event);
+            }
         }
     }
 
